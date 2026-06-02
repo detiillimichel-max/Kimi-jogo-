@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dodge Blocks</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0d0f1a" />
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preload" href="style.css" as="style" />
+  <link rel="stylesheet" href="style.css" />
+  <meta name="description" content="Desvie dos blocos, marque pontos e jogue offline (PWA).">
+</head>
+<body>
+  <header>
+    <h1>Dodge Blocks</h1>
+    <div class="hud">
+      <span>Pontos: <strong id="score">0</strong></span>
+      <span>Recorde: <strong id="best">0</strong></span>
+    </div>
+  </header>
+
+  <main>
+    <canvas id="game" width="360" height="600" aria-label="Área do jogo"></canvas>
+    <div class="overlay" id="menu">
+      <h2>Dodge Blocks</h2>
+      <p>Use ← → ou toque para mover. Desvie dos blocos.</p>
+      <button id="startBtn">Jogar</button>
+    </div>
+    <div class="overlay hidden" id="gameover">
+      <h2>Game Over</h2>
+      <p>Sua pontuação: <strong id="finalScore">0</strong></p>
+      <button id="restartBtn">Recomeçar</button>
+    </div>
+  </main>
+
+  <footer>
+    <small>Feito com HTML, CSS e JS — funciona offline.</small>
+  </footer>
+
+  <script src="script.js" defer></script>
+  <script>
+    // Registro do Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+  </script>
+</body>
+</html>
