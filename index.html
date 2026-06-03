@@ -213,28 +213,31 @@
 </script><script>window.Intl=window.Intl||{};Intl.t=function(s){return(Intl._locale&&Intl._locale[s])||s;};</script>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Dodge Blocks V5</title>
+<title>Dodge Adventure V2</title>
 <style>
-:root{--bg:#0d0f1a;--text:#e6eaf2;--muted:#8892b0;--accent:#6ee7ff}
+:root{--bg:#02040a;--text:#e6eaf2;--muted:#8892b0;--accent:#6ee7ff}
 *{box-sizing:border-box}
 body{margin:0;background:#02040a;color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-header,main{max-width:420px;margin:0 auto;padding:12px 16px}
+header,main{max-width:440px;margin:0 auto;padding:12px 16px}
 .topbar{display:flex;justify-content:space-between;align-items:center}
 .hud{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:14px}
 .hud strong{color:var(--text)}
-canvas{width:100%;height:auto;background:radial-gradient(800px 400px at 50% -100px,#0f1a3a,#02040a);border:1px solid #1f2542;border-radius:12px;display:block}
-.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:10}
-.card{background:#14182b;border:1px solid #2a335a;border-radius:12px;padding:20px;max-width:360px;width:90%;text-align:center}
+canvas{width:100%;height:auto;background:linear-gradient(180deg,#0a1a2e,#02040a);border:1px solid #1f2542;border-radius:12px;display:block}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.78);z-index:10}
+.card{background:#14182b;border:1px solid #2a335a;border-radius:12px;padding:20px;max-width:380px;width:92%;text-align:center}
 .hidden{display:none}
 button{background:linear-gradient(180deg,#2b335a,#202646);color:var(--text);border:1px solid #364075;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;margin:4px}
+button:disabled{opacity:.5;cursor:not-allowed}
 .badge{background:#1f2542;color:var(--accent);padding:4px 8px;border-radius:999px;font-size:12px}
 .iconbtn{background:#1f2542;border:1px solid #364075;border-radius:8px;padding:6px 10px}
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.shop-item{background:#0f142a;border:1px solid #2a335a;border-radius:10px;padding:10px}
 </style>
 </head>
 <body>
 <header>
 <div class="topbar">
-<h2>Dodge Blocks <span class="badge" id="phaseBadge">Fase 1</span></h2>
+<h2>Aventura <span class="badge" id="phaseBadge">Fase 1</span></h2>
 <div>
 <button class="iconbtn" id="pauseBtn">⏸️</button>
 <button class="iconbtn" id="shopBtn">🛒</button>
@@ -254,7 +257,7 @@ button{background:linear-gradient(180deg,#2b335a,#202646);color:var(--text);bord
 <div class="overlay" id="tutorial">
 <div class="card">
 <h2>Como Jogar</h2>
-<p style="text-align:left">• Desvie dos quadrados azuis<br>• Se encostar, perde 1 vida e 50 pontos<br>• Pegue ⭐ moedas, 🛡️ escudo, ❤️ vida<br>• Pause e compre na loja</p>
+<p style="text-align:left">• Você é 🧍<br>• Desvie de 🌲 🌀 🐗<br>• Colete ⭐ 🛡️ ❤️<br>• Compre vida e escudo na loja</p>
 <button id="startBtn">Começar</button>
 </div>
 </div>
@@ -264,6 +267,7 @@ button{background:linear-gradient(180deg,#2b335a,#202646);color:var(--text);bord
 <h2>Pausado</h2>
 <button id="resumeBtn">Continuar</button>
 <button id="shopFromPause">Loja</button>
+<button id="restartBtn">Recomeçar</button>
 </div>
 </div>
 
@@ -286,7 +290,7 @@ button{background:linear-gradient(180deg,#2b335a,#202646);color:var(--text);bord
 <div class="overlay hidden" id="shop">
 <div class="card">
 <h2>Loja</h2>
-<div id="shopList"></div>
+<div class="shop-grid" id="shopGrid"></div>
 <button id="closeShop">Fechar</button>
 </div>
 </div>
@@ -301,81 +305,93 @@ const finalScoreEl=document.getElementById('finalScore');
 document.getElementById('startBtn').onclick=start;
 document.getElementById('pauseBtn').onclick=pause;
 document.getElementById('resumeBtn').onclick=resume;
+document.getElementById('restartBtn').onclick=()=>{pauseMenu.classList.add('hidden');start();};
 document.getElementById('retryBtn').onclick=()=>{gameover.classList.add('hidden');start();};
 document.getElementById('shopBtn').onclick=openShop;
 document.getElementById('shopFromPause').onclick=()=>{pauseMenu.classList.add('hidden');openShop();};
-document.getElementById('closeShop').onclick=()=>{shop.classList.add('hidden');};
+document.getElementById('closeShop').onclick=()=>{shop.classList.add('hidden'); if(state.paused) pauseMenu.classList.remove('hidden'); };
 document.getElementById('nextPhaseBtn').onclick=nextPhase;
 
 function setup(){const w=canvas.clientWidth||360; const h=Math.round(w*600/360); canvas.style.height=h+'px'; const dpr=Math.min(devicePixelRatio||1,2); canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);}
 setup(); addEventListener('resize',setup);
 
 const save={coins:+localStorage.getItem('db_coins')||0};
-coinsEl.textContent=save.coins;
+function updateCoinsUI(){coinsEl.textContent=save.coins;}
+updateCoinsUI();
 
-const state={running:false,score:0,best:+localStorage.getItem('db_best')||0,lives:5,phase:1,phaseTarget:1000,player:{x:156,y:520,w:48,h:48,targetX:156},obstacles:[],powerups:[],t:0,speed:2,spawnEvery:65,shield:0,invuln:0,coinsEarned:0,hitFlash:0};
+const state={running:false,paused:false,score:0,best:+localStorage.getItem('db_best')||0,lives:5,phase:1,phaseTarget:1000,player:{x:156,y:500,w:48,h:60,targetX:156,trail:[]},obstacles:[],powerups:[],t:0,speed:2.2,spawnEvery:60,shield:0,invuln:0};
 bestEl.textContent=state.best;
 
-addEventListener('keydown',e=>{if(e.key==='ArrowLeft')state.player.targetX-=40;if(e.key==='ArrowRight')state.player.targetX+=40;});
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft')state.player.targetX-=45;if(e.key==='ArrowRight')state.player.targetX+=45;});
 canvas.addEventListener('pointerdown',e=>{const r=canvas.getBoundingClientRect();state.player.targetX=e.clientX-r.left-24;});
 canvas.addEventListener('pointermove',e=>{if(e.pressure===0)return;const r=canvas.getBoundingClientRect();state.player.targetX=e.clientX-r.left-24;});
 
 function start(){
-Object.assign(state,{running:true,score:0,lives:5,phase:1,phaseTarget:1000,obstacles:[],powerups:[],t:0,speed:2,spawnEvery:65,shield:0,invuln:0,coinsEarned:0,hitFlash:0,player:{x:156,y:520,w:48,h:48,targetX:156}});
-tutorial.classList.add('hidden');pauseMenu.classList.add('hidden');phaseComplete.classList.add('hidden');gameover.classList.add('hidden');shop.classList.add('hidden');
-phaseBadge.textContent='Fase 1';
-update();
+ Object.assign(state,{running:true,paused:false,score:0,lives:5,phase:1,phaseTarget:1000,obstacles:[],powerups:[],t:0,speed:2.2,spawnEvery:60,shield:0,invuln:0,player:{x:156,y:500,w:48,h:60,targetX:156,trail:[]}});
+ tutorial.classList.add('hidden'); pauseMenu.classList.add('hidden'); phaseComplete.classList.add('hidden'); gameover.classList.add('hidden'); shop.classList.add('hidden');
+ phaseBadge.textContent='Fase 1';
+ loop();
 }
-function pause(){if(!state.running)return;state.running=false;pauseMenu.classList.remove('hidden');}
-function resume(){pauseMenu.classList.add('hidden');state.running=true;update();}
-function openShop(){shop.classList.remove('hidden');renderShop();}
+function pause(){if(!state.running) return; state.running=false; state.paused=true; pauseMenu.classList.remove('hidden');}
+function resume(){pauseMenu.classList.add('hidden'); state.running=true; state.paused=false; loop();}
+function openShop(){shop.classList.remove('hidden'); renderShop();}
 
 function rand(a,b){return Math.random()*(b-a)+a}
 function rectOverlap(a,b){return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;}
 
+const obstacleTypes=[{emoji:'🌲',w:50,h:60},{emoji:'🌀',w:48,h:48},{emoji:'🐗',w:56,h:44}];
+
 function spawn(){
  const w=canvas.clientWidth;
- const safeX=rand(70,w-130), safeW=120;
- let x; do{x=rand(0,w-60);}while(x>safeX-safeW && x<safeX+safeW);
- state.obstacles.push({x,y:-60,w:rand(50,70),h:rand(35,55),vy:state.speed});
- if(Math.random()<0.5) state.powerups.push({x:rand(30,w-30),y:-30,r:16,vy:1.8,type: Math.random()<0.7?'coin': Math.random()<0.5?'shield':'life'});
+ // garante obstáculo mesmo no meio: 70% chance de spawn perto do jogador
+ const nearPlayer = Math.random()<0.7;
+ let x;
+ if(nearPlayer){
+  x = Math.max(0, Math.min(w-60, state.player.x + rand(-80,80)));
+ }else{
+  x = rand(0,w-60);
+ }
+ const type=obstacleTypes[Math.floor(Math.random()*obstacleTypes.length)];
+ state.obstacles.push({x,y:-70,w:type.w,h:type.h,vy:state.speed+rand(0,0.6),emoji:type.emoji});
+ // powerups
+ if(Math.random()<0.6){
+  const types=['coin','shield','life'];
+  const tp=types[Math.floor(Math.random()*types.length)];
+  state.powerups.push({x:rand(30,w-30),y:-30,r:18,vy:1.9,type:tp});
+ }
 }
 
-function update(){
+function loop(){
  if(!state.running) return;
  state.t++;
  if(state.shield>0)state.shield--;
  if(state.invuln>0)state.invuln--;
- if(state.hitFlash>0)state.hitFlash--;
 
  if(state.t % state.spawnEvery ===0) spawn();
 
  state.player.x += (state.player.targetX - state.player.x)*0.25;
  state.player.x = Math.max(0, Math.min(canvas.clientWidth-state.player.w, state.player.x));
+ state.player.trail.push({x:state.player.x,y:state.player.y,life:12});
+ if(state.player.trail.length>12) state.player.trail.shift();
 
  state.obstacles.forEach(o=>o.y+=o.vy);
- state.obstacles = state.obstacles.filter(o=>o.y<canvas.clientHeight+70);
+ state.obstacles=state.obstacles.filter(o=>o.y<canvas.clientHeight+80);
  state.powerups.forEach(p=>p.y+=p.vy);
- state.powerups = state.powerups.filter(p=>p.y<canvas.clientHeight+30);
+ state.powerups=state.powerups.filter(p=>p.y<canvas.clientHeight+30);
 
- const pRect={x:state.player.x,y:state.player.y,w:state.player.w,h:state.player.h};
- // colisão com obstáculos
+ const pRect={x:state.player.x+8,y:state.player.y+10,w:state.player.w-16,h:state.player.h-10};
  for(const o of [...state.obstacles]){
   if(rectOverlap(pRect,{x:o.x,y:o.y,w:o.w,h:o.h}) && state.invuln===0){
-   if(state.shield>0){
-    state.shield=0; state.invuln=40; state.obstacles=state.obstacles.filter(x=>x!==o);
-   }else{
-    state.lives--; state.score=Math.max(0,state.score-50); state.invuln=60; state.hitFlash=15;
-    state.obstacles=state.obstacles.filter(x=>x!==o);
-    if(state.lives<=0){gameOver();return;}
-   }
+   if(state.shield>0){state.shield=0; state.invuln=50; state.obstacles=state.obstacles.filter(x=>x!==o); break;}
+   state.lives--; state.score=Math.max(0,state.score-50); state.invuln=70;
+   state.obstacles=state.obstacles.filter(x=>x!==o);
+   if(state.lives<=0){gameOver(); return;}
    break;
   }
  }
- // powerups
  for(const pu of [...state.powerups]){
-  if(Math.hypot(pu.x-(state.player.x+24), pu.y-(state.player.y+24))<34){
-   if(pu.type==='coin') state.coinsEarned+=3;
+  if(Math.hypot(pu.x-(state.player.x+24), pu.y-(state.player.y+30))<38){
+   if(pu.type==='coin'){save.coins+=3; localStorage.setItem('db_coins',save.coins); updateCoinsUI();}
    if(pu.type==='shield') state.shield=500;
    if(pu.type==='life') state.lives++;
    state.powerups=state.powerups.filter(x=>x!==pu);
@@ -391,57 +407,69 @@ function update(){
 
  scoreEl.textContent=state.score;
  livesEl.textContent=state.lives;
- coinsEl.textContent=save.coins+state.coinsEarned;
  draw();
- requestAnimationFrame(update);
+ requestAnimationFrame(loop);
 }
 
 function nextPhase(){
- state.phase++; state.lives++; state.phaseTarget+=800; state.speed+=0.3;
+ state.phase++; state.lives++; state.phaseTarget+=900; state.speed+=0.25;
  phaseBadge.textContent='Fase '+state.phase;
  phaseComplete.classList.add('hidden');
  state.running=true;
- update();
+ loop();
 }
 
 function draw(){
  const w=canvas.clientWidth,h=canvas.clientHeight;
- // bg
- const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#1a0f2e'); g.addColorStop(1,'#02040a'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
- // hit flash
- if(state.hitFlash>0){ctx.fillStyle='rgba(255,0,80,0.15)'; ctx.fillRect(0,0,w,h);}
+ const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0a2a1a'); g.addColorStop(1,'#02040a'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+ ctx.fillStyle='#0d2818'; ctx.fillRect(0,h-40,w,40);
+ // trail
+ state.player.trail.forEach(t=>{ctx.globalAlpha=t.life/12*0.25; ctx.font='32px serif'; ctx.fillText('🧍',t.x+8,t.y+45);}); ctx.globalAlpha=1;
  // obstacles
- ctx.fillStyle='#6ee7ff'; ctx.shadowColor='#6ee7ff66'; ctx.shadowBlur=10;
- state.obstacles.forEach(o=>ctx.fillRect(o.x,o.y,o.w,o.h));
- ctx.shadowBlur=0;
+ ctx.font='44px serif'; ctx.textAlign='center';
+ state.obstacles.forEach(o=>{ctx.fillText(o.emoji,o.x+o.w/2,o.y+o.h);});
  // powerups
  state.powerups.forEach(p=>{
-  ctx.beginPath(); ctx.fillStyle=p.type==='shield'?'#6ee7ff':p.type==='life'?'#ff6e9a':'#ffd700';
-  ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+  ctx.font='28px serif';
+  const e=p.type==='shield'?'🛡️':p.type==='life'?'❤️':'⭐';
+  ctx.fillText(e,p.x,p.y);
  });
  // player
- ctx.fillStyle=state.invuln>0 && (state.t%6<3)?'rgba(110,231,255,0.4)':'#6ee7ff';
- ctx.shadowColor='#6ee7ffaa'; ctx.shadowBlur=18;
- ctx.fillRect(state.player.x,state.player.y,state.player.w,state.player.h);
- ctx.shadowBlur=0;
- if(state.shield>0){ctx.strokeStyle='#6ee7ff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(state.player.x+24,state.player.y+24,38,0,Math.PI*2);ctx.stroke();}
+ ctx.font='48px serif';
+ ctx.fillText('🧍',state.player.x+24,state.player.y+50);
+ if(state.shield>0){ctx.strokeStyle='#6ee7ff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(state.player.x+24,state.player.y+30,36,0,Math.PI*2);ctx.stroke();}
 }
 
 function gameOver(){
- state.running=false;
- save.coins+=state.coinsEarned; localStorage.setItem('db_coins',save.coins);
+ state.running=false; state.paused=false;
  finalScoreEl.textContent=state.score;
  if(state.score>state.best){state.best=state.score; localStorage.setItem('db_best',state.best); bestEl.textContent=state.best;}
  gameover.classList.remove('hidden');
- coinsEl.textContent=save.coins;
 }
 
 function renderShop(){
- const list=document.getElementById('shopList');
- list.innerHTML='<p>Skins em breve! Moedas: '+save.coins+'</p>';
+ const grid=document.getElementById('shopGrid'); grid.innerHTML='';
+ const items=[
+  {name:'Vida +1',price:50,action:()=>{state.lives++; livesEl.textContent=state.lives;}},
+  {name:'Escudo',price:30,action:()=>{state.shield=500;}},
+  {name:'Moedas +20',price:0,action:()=>{save.coins+=20; localStorage.setItem('db_coins',save.coins); updateCoinsUI();}}
+ ];
+ items.forEach(it=>{
+  const canBuy = save.coins >= it.price;
+  const div=document.createElement('div'); div.className='shop-item';
+  div.innerHTML=`<strong>${it.name}</strong><br><small>${it.price} moedas</small><br><button ${!canBuy?'disabled':''}>Comprar</button>`;
+  div.querySelector('button').onclick=()=>{
+   if(save.coins>=it.price){
+    save.coins-=it.price; localStorage.setItem('db_coins',save.coins); updateCoinsUI();
+    it.action();
+    renderShop();
+   }
+  };
+  grid.appendChild(div);
+ });
 }
 })();
 </script>
 </body>
   </html>
-    
+  
