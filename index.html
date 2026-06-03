@@ -1,52 +1,508 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dodge Blocks</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0d0f1a" />
-  <link rel="icon" href="icons/icon-192.png" sizes="192x192">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="preload" href="style.css" as="style" />
-  <link rel="stylesheet" href="style.css" />
-  <meta name="description" content="Desvie dos blocos, marque pontos e jogue offline (PWA).">
+<!-- Playables SDK -->
+<script>// Playables SDK v1.0.0
+// Game lifecycle bridge: rAF-based game-ready detection + event communication
+(function() {
+  'use strict';
+
+  // Idempotency: skip if already initialized (e.g., server-side injection
+  // followed by client-side inject-javascript via the Bloks webview component).
+  if (window.playablesSDK) return;
+
+  var HANDLER_NAME = 'playablesGameEventHandler';
+  var ANDROID_BRIDGE_NAME = '_MetaPlayablesBridge';
+  var RAF_FRAME_THRESHOLD = 3;
+
+  var gameReadySent = false;
+  var firstInteractionSent = false;
+  var errorSent = false;
+  var frameCount = 0;
+  var originalRAF = window.requestAnimationFrame;
+
+  // --- Transport Layer ---
+
+  function hasIOSBridge() {
+    return !!(window.webkit &&
+              window.webkit.messageHandlers &&
+              window.webkit.messageHandlers[HANDLER_NAME]);
+  }
+
+  function hasAndroidBridge() {
+    return !!(window[ANDROID_BRIDGE_NAME] &&
+              typeof window[ANDROID_BRIDGE_NAME].postEvent === 'function');
+  }
+
+  function isInIframe() {
+    return !!(window.parent && window.parent !== window);
+  }
+
+  function sendEvent(eventName, payload) {
+    var message = {
+      type: eventName,
+      payload: payload || {},
+      timestamp: Date.now()
+    };
+
+    if (hasIOSBridge()) {
+      try {
+        window.webkit.messageHandlers[HANDLER_NAME].postMessage(message);
+      } catch (e) { /* ignore */ }
+      return;
+    }
+
+    if (hasAndroidBridge()) {
+    try {
+      var p = payload || {};
+      p.__secureToken = window.__fbAndroidBridgeAuthToken || '';
+      p.timestamp = message.timestamp;
+      window[ANDROID_BRIDGE_NAME].postEvent(
+        eventName,
+        JSON.stringify(p)
+      );
+    } catch (e) { /* ignore */ }
+    return;
+  }
+
+    if (isInIframe()) {
+      try {
+        window.parent.postMessage(message, '*');
+      } catch (e) { /* ignore */ }
+      return;
+    }
+  }
+
+  // --- rAF Game-Ready Detection ---
+
+  function onFrame() {
+    if (gameReadySent) return;
+
+    frameCount++;
+    if (frameCount >= RAF_FRAME_THRESHOLD) {
+      gameReadySent = true;
+      sendEvent('game_ready', {
+        frame_count: frameCount,
+        detected_at: Date.now()
+      });
+      return;
+    }
+
+    originalRAF.call(window, onFrame);
+  }
+
+  if (originalRAF) {
+    window.requestAnimationFrame = function(callback) {
+      if (!gameReadySent) {
+        return originalRAF.call(window, function(timestamp) {
+          frameCount++;
+          if (frameCount >= RAF_FRAME_THRESHOLD && !gameReadySent) {
+            gameReadySent = true;
+            sendEvent('game_ready', {
+              frame_count: frameCount,
+              detected_at: Date.now()
+            });
+          }
+          callback(timestamp);
+        });
+      }
+      return originalRAF.call(window, callback);
+    };
+  }
+
+  // --- First User Interaction Detection ---
+
+  function setupFirstInteractionDetection() {
+    var events = ['touchstart', 'mousedown', 'keydown'];
+
+    function onFirstInteraction() {
+      if (firstInteractionSent) return;
+      firstInteractionSent = true;
+      sendEvent('user_interaction_start', null);
+
+      for (var i = 0; i < events.length; i++) {
+        document.removeEventListener(events[i], onFirstInteraction, true);
+      }
+    }
+
+    for (var i = 0; i < events.length; i++) {
+      document.addEventListener(events[i], onFirstInteraction, true);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupFirstInteractionDetection);
+  } else {
+    setupFirstInteractionDetection();
+  }
+
+  // --- Auto Error Capture ---
+
+  window.addEventListener('error', function(event) {
+    if (errorSent) return;
+    errorSent = true;
+    sendEvent('error', {
+      message: event.message || 'Unknown error',
+      source: event.filename || '',
+      lineno: event.lineno || 0,
+      colno: event.colno || 0,
+      auto_captured: true
+    });
+  });
+
+  window.addEventListener('unhandledrejection', function(event) {
+    if (errorSent) return;
+    errorSent = true;
+    var reason = event.reason;
+    sendEvent('error', {
+      message: (reason instanceof Error) ? reason.message : String(reason),
+      type: 'unhandled_promise_rejection',
+      auto_captured: true
+    });
+  });
+
+  // --- Public API ---
+
+  window.playablesSDK = {
+    complete: function(score) {
+      sendEvent('game_ended', {
+        score: score,
+        completed: true
+      });
+    },
+
+    error: function(message) {
+      if (errorSent) return;
+      errorSent = true;
+      sendEvent('error', {
+        message: message || 'Unknown error',
+        auto_captured: false
+      });
+    },
+
+    sendEvent: function(eventName, payload) {
+      if (!eventName || typeof eventName !== 'string') return;
+      sendEvent(eventName, payload);
+    }
+  };
+
+  // Kick off rAF detection in case no game code calls rAF immediately
+  if (originalRAF) {
+    originalRAF.call(window, onFrame);
+  }
+})();</script>
+<!-- PLAYABLE_TOUCH_PATCH_V1 --><script>
+(function() {
+  if (window.__playableTouchPatchInstalled) return;
+  window.__playableTouchPatchInstalled = true;
+  var origAdd = EventTarget.prototype.addEventListener;
+  var blockedTypes = { touchstart: 1, touchmove: 1, wheel: 1 };
+  EventTarget.prototype.addEventListener = function(type, listener, options) {
+    if (blockedTypes[type]) {
+      if (options === undefined || options === null) {
+        options = { passive: true };
+      } else if (typeof options === 'boolean') {
+        options = { capture: options, passive: true };
+      } else {
+        options = Object.assign({}, options, { passive: true });
+      }
+    }
+    return origAdd.call(this, type, listener, options);
+  };
+})();
+</script><script>window.Intl=window.Intl||{};Intl.t=function(s){return(Intl._locale&&Intl._locale[s])||s;};</script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dodge Blocks Pro</title>
+<meta name="theme-color" content="#0d0f1a" />
+<style>
+:root{--bg:#0d0f1a;--panel:#14182b;--text:#e6eaf2;--accent:#6ee7ff;--muted:#8892b0}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:radial-gradient(1200px 800px at 50% -200px,#18203a,var(--bg));color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+header,footer{max-width:420px;margin:0 auto;padding:12px 16px}
+header h1{margin:8px 0;font-size:20px}
+.hud{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+.hud strong{color:var(--text)}
+main{max-width:420px;margin:0 auto;padding:8px 16px 20px;position:relative}
+canvas#game{width:100%;height:auto;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)),repeating-linear-gradient(180deg,rgba(238,238,255,.03) 0 2px,transparent 2px 32px);border:1px solid #1f2542;border-radius:12px;display:block}
+.overlay{position:absolute;inset:16px auto auto 16px;right:16px;background:rgba(13,15,26,.9);border:1px solid #1f2542;backdrop-filter:blur(6px);border-radius:12px;padding:24px;text-align:center}
+.hidden{display:none}
+button{appearance:none;background:linear-gradient(180deg,#2b335a,#202646);color:var(--text);border:1px solid #364075;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
+button:hover{filter:brightness(1.1)}
+.controls{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#1f2542;color:var(--accent);font-size:12px;margin-left:6px}
+</style>
 </head>
 <body>
-  <header>
-    <h1>Dodge Blocks</h1>
-    <div class="hud">
-      <span>Pontos: <strong id="score">0</strong></span>
-      <span>Recorde: <strong id="best">0</strong></span>
-    </div>
-  </header>
+<header>
+<h1>Dodge Blocks Pro <span class="badge" id="phaseBadge">Fase 1</span></h1>
+<div class="hud">
+<span>Pontos: <strong id="score">0</strong></span>
+<span>Recorde: <strong id="best">0</strong></span>
+<span>Vidas: <strong id="lives">3</strong></span>
+<span>Power: <strong id="power">-</strong></span>
+</div>
+</header>
+<main>
+<canvas id="game" width="360" height="600" aria-label="Área do jogo"></canvas>
+<div class="overlay" id="menu">
+<h2>Dodge Blocks Pro</h2>
+<p>← → ou toque para mover. Espaço = Dash. Pegue power-ups!</p>
+<div class="controls">
+<button id="startBtn">Jogar</button>
+<button id="howBtn">Como jogar</button>
+</div>
+</div>
+<div class="overlay hidden" id="how">
+<h2>Como Jogar</h2>
+<p style="text-align:left;line-height:1.5">
+• Desvie dos blocos<br>
+• Pegue escudo 🛡️, slow ⏱️ e moedas 🪙<br>
+• Dash com Espaço ou toque duplo<br>
+• 3 vidas. Fases aumentam dificuldade
+</p>
+<button id="backBtn">Voltar</button>
+</div>
+<div class="overlay hidden" id="gameover">
+<h2>Game Over</h2>
+<p>Sua pontuação: <strong id="finalScore">0</strong></p>
+<button id="restartBtn">Recomeçar</button>
+</div>
+</main>
+<footer><small>Feito com HTML, CSS e JS — PWA offline.</small></footer>
+<script>
+(() => {
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+const livesEl = document.getElementById('lives');
+const powerEl = document.getElementById('power');
+const phaseBadge = document.getElementById('phaseBadge');
+const menu = document.getElementById('menu');
+const how = document.getElementById('how');
+const gameover = document.getElementById('gameover');
+const finalScoreEl = document.getElementById('finalScore');
+document.getElementById('startBtn').onclick = start;
+document.getElementById('restartBtn').onclick = start;
+document.getElementById('howBtn').onclick = ()=>{menu.classList.add('hidden');how.classList.remove('hidden');};
+document.getElementById('backBtn').onclick = ()=>{how.classList.add('hidden');menu.classList.remove('hidden');};
 
-  <main>
-    <canvas id="game" width="360" height="600" aria-label="Área do jogo"></canvas>
-    <div class="overlay" id="menu">
-      <h2>Dodge Blocks</h2>
-      <p>Use ← → ou toque para mover. Desvie dos blocos.</p>
-      <button id="startBtn">Jogar</button>
-    </div>
-    <div class="overlay hidden" id="gameover">
-      <h2>Game Over</h2>
-      <p>Sua pontuação: <strong id="finalScore">0</strong></p>
-      <button id="restartBtn">Recomeçar</button>
-    </div>
-  </main>
+function setupCanvas(){
+  const cssW = canvas.clientWidth;
+  const cssH = Math.round(cssW*600/360);
+  canvas.style.height = cssH+'px';
+  const dpr = Math.min(window.devicePixelRatio||1,2);
+  canvas.width = Math.round(cssW*dpr);
+  canvas.height = Math.round(cssH*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+setupCanvas();
+addEventListener('resize',setupCanvas);
 
-  <footer>
-    <small>Feito com HTML, CSS e JS — funciona offline.</small>
-  </footer>
+const state = {
+  running:false,
+  score:0,
+  best:+localStorage.getItem('db_best')||0,
+  lives:3,
+  player:{x:160,y:520,w:40,h:40,speed:5,targetX:160},
+  obstacles:[],
+  powerups:[],
+  t:0,
+  phase:1,
+  speed:2,
+  spawnEvery:48,
+  dashCD:0,
+  shield:0,
+  slow:0,
+  invuln:0
+};
+bestEl.textContent = state.best;
 
-  <script src="script.js" defer></script>
-  <script>
-    // Registro do Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js');
-      });
+const keys={left:false,right:false};
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')keys.left=true;
+  if(e.key==='ArrowRight'||e.key==='d')keys.right=true;
+  if(e.code==='Space')dash();
+});
+addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')keys.left=false;
+  if(e.key==='ArrowRight'||e.key==='d')keys.right=false;
+});
+
+let lastTap=0;
+canvas.addEventListener('pointerdown',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  const now=performance.now();
+  if(now-lastTap<300)dash(); lastTap=now;
+  state.player.targetX = x-state.player.w/2;
+});
+canvas.addEventListener('pointermove',e=>{
+  if(e.pressure===0)return;
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  state.player.targetX = x-state.player.w/2;
+});
+
+function dash(){
+  if(state.dashCD>0||!state.running)return;
+  state.player.targetX += (state.player.targetX>state.player.x?1:-1)*80;
+  state.dashCD=60;
+  state.invuln=20;
+}
+
+function start(){
+  Object.assign(state,{
+    running:true,score:0,lives:3,obstacles:[],powerups:[],t:0,phase:1,speed:2,spawnEvery:48,dashCD:0,shield:0,slow:0,invuln:0,
+    player:{x:160,y:520,w:40,h:40,speed:5,targetX:160}
+  });
+  menu.classList.add('hidden');
+  how.classList.add('hidden');
+  gameover.classList.add('hidden');
+  update();
+}
+
+function rand(a,b){return Math.random()*(b-a)+a}
+function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+
+function spawn(){
+  const w=canvas.clientWidth;
+  // obstacles
+  const count = state.phase===1?2:state.phase===2?3:4;
+  for(let i=0;i<count;i++){
+    const laneW = rand(50,70);
+    state.obstacles.push({
+      x:rand(0,w-laneW), y:-60, w:laneW, h:rand(20,50),
+      vy:state.speed* (state.slow>0?0.5:1) + rand(0,0.8),
+      type: Math.random()<0.2?'mover':'block',
+      vx: rand(-1,1)
+    });
+  }
+  // powerup chance
+  if(Math.random()<0.25){
+    const types=['shield','slow','coin'];
+    const type=types[Math.floor(Math.random()*types.length)];
+    state.powerups.push({x:rand(20,w-20),y:-30,w:24,h:24,vy:2,type});
+  }
+}
+
+function update(){
+  if(!state.running)return;
+  state.t++;
+  if(state.dashCD>0)state.dashCD--;
+  if(state.shield>0)state.shield--;
+  if(state.slow>0)state.slow--;
+  if(state.invuln>0)state.invuln--;
+
+  // phase progression
+  if(state.score>500 && state.phase===1){state.phase=2;state.speed=3;state.spawnEvery=40;phaseBadge.textContent='Fase 2'}
+  if(state.score>1200 && state.phase===2){state.phase=3;state.speed=4;state.spawnEvery=32;phaseBadge.textContent='Fase 3'}
+
+  if(state.t % state.spawnEvery===0) spawn();
+
+  // player move
+  if(keys.left) state.player.targetX -= 10;
+  if(keys.right) state.player.targetX += 10;
+  state.player.x += (state.player.targetX - state.player.x)*0.25;
+  state.player.x = Math.max(0,Math.min(canvas.clientWidth-state.player.w,state.player.x));
+
+  // update obstacles
+  state.obstacles.forEach(o=>{
+    o.y += o.vy;
+    if(o.type==='mover') o.x += Math.sin(state.t*0.05+i)*o.vx;
+  });
+  state.obstacles = state.obstacles.filter(o=>o.y<canvas.clientHeight+60);
+
+  // update powerups
+  state.powerups.forEach(p=>p.y+=p.vy);
+  state.powerups = state.powerups.filter(p=>p.y<canvas.clientHeight+30);
+
+  // collisions
+  const pRect={x:state.player.x,y:state.player.y,w:state.player.w,h:state.player.h};
+  for(const o of state.obstacles){
+    if(overlap(pRect,o) && state.invuln===0){
+      if(state.shield>0){state.shield=0;state.invuln=60;state.obstacles=state.obstacles.filter(x=>x!==o);break;}
+      state.lives--;
+      state.invuln=90;
+      if(state.lives<=0){gameOver();return;}
     }
-  </script>
+  }
+  for(const pu of [...state.powerups]){
+    if(overlap(pRect,pu)){
+      if(pu.type==='shield')state.shield=600;
+      if(pu.type==='slow')state.slow=300;
+      if(pu.type==='coin')state.score+=100;
+      state.powerups=state.powerups.filter(x=>x!==pu);
+    }
+  }
+
+  state.score++;
+  scoreEl.textContent=state.score;
+  livesEl.textContent=state.lives;
+  powerEl.textContent = state.shield>0?'Escudo':state.slow>0?'Slow':'-';
+
+  draw();
+  requestAnimationFrame(update);
+}
+
+function draw(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  // stars
+  ctx.globalAlpha=0.15;
+  for(let i=0;i<30;i++){
+    const x=(i*97+state.t*0.3)%w;
+    const y=(i*53+state.t*0.2)%h;
+    ctx.fillStyle='#fff';
+    ctx.fillRect(x,y,2,2);
+  }
+  ctx.globalAlpha=1;
+  // obstacles
+  state.obstacles.forEach(o=>{
+    const g=ctx.createLinearGradient(o.x,o.y,o.x,o.y+o.h);
+    g.addColorStop(0,'rgba(110,231,255,.9)');
+    g.addColorStop(1,'rgba(60,120,200,.9)');
+    ctx.fillStyle=g;
+    ctx.fillRect(o.x,o.y,o.w,o.h);
+  });
+  // powerups
+  state.powerups.forEach(p=>{
+    ctx.fillStyle = p.type==='shield'?'#6ee7ff':p.type==='slow'?'#ffdd55':'#ffd700';
+    ctx.beginPath();
+    ctx.arc(p.x+12,p.y+12,12,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.font='14px system-ui';
+    ctx.textAlign='center';
+    ctx.fillText(p.type==='shield'?'🛡':p.type==='slow'?'⏱':'$',p.x+12,p.y+17);
+  });
+  // player
+  ctx.save();
+  if(state.invuln>0 && Math.floor(state.t/5)%2===0)ctx.globalAlpha=0.4;
+  ctx.fillStyle='#6ee7ff';
+  ctx.shadowColor='#6ee7ff88';
+  ctx.shadowBlur=12;
+  ctx.fillRect(state.player.x,state.player.y,state.player.w,state.player.h);
+  ctx.restore();
+  // shield ring
+  if(state.shield>0){
+    ctx.strokeStyle='#6ee7ff';
+    ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.arc(state.player.x+20,state.player.y+20,30,0,Math.PI*2);
+    ctx.stroke();
+  }
+}
+
+function gameOver(){
+  state.running=false;
+  finalScoreEl.textContent=state.score;
+  if(state.score>state.best){state.best=state.score;localStorage.setItem('db_best',state.best);bestEl.textContent=state.best;}
+  gameover.classList.remove('hidden');
+}
+})();
+</script>
 </body>
-</html>
+  </html>
+  
