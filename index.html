@@ -213,294 +213,271 @@
 </script><script>window.Intl=window.Intl||{};Intl.t=function(s){return(Intl._locale&&Intl._locale[s])||s;};</script>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Dodge Blocks Pro</title>
+<title>Dodge Blocks Kids V4</title>
 <meta name="theme-color" content="#0d0f1a" />
 <style>
 :root{--bg:#0d0f1a;--panel:#14182b;--text:#e6eaf2;--accent:#6ee7ff;--muted:#8892b0}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:radial-gradient(1200px 800px at 50% -200px,#18203a,var(--bg));color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+html,body{margin:0;height:100%;background:#02040a;color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
 header,footer{max-width:420px;margin:0 auto;padding:12px 16px}
-header h1{margin:8px 0;font-size:20px}
-.hud{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+header h1{margin:8px 0;font-size:20px;display:flex;align-items:center;gap:8px}
+.hud{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:14px}
 .hud strong{color:var(--text)}
 main{max-width:420px;margin:0 auto;padding:8px 16px 20px;position:relative}
-canvas#game{width:100%;height:auto;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)),repeating-linear-gradient(180deg,rgba(238,238,255,.03) 0 2px,transparent 2px 32px);border:1px solid #1f2542;border-radius:12px;display:block}
-.overlay{position:absolute;inset:16px auto auto 16px;right:16px;background:rgba(13,15,26,.9);border:1px solid #1f2542;backdrop-filter:blur(6px);border-radius:12px;padding:24px;text-align:center}
+canvas#game{width:100%;height:auto;background:radial-gradient(800px 400px at 50% -100px,#0f1a3a,#02040a);border:1px solid #1f2542;border-radius:12px;display:block}
+.overlay{position:absolute;inset:16px auto auto 16px;right:16px;background:rgba(13,15,26,.96);border:1px solid #1f2542;backdrop-filter:blur(8px);border-radius:12px;padding:20px;text-align:center;max-height:80vh;overflow:auto}
 .hidden{display:none}
-button{appearance:none;background:linear-gradient(180deg,#2b335a,#202646);color:var(--text);border:1px solid #364075;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
+button{appearance:none;background:linear-gradient(180deg,#2b335a,#202646);color:var(--text);border:1px solid #364075;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;margin:4px}
 button:hover{filter:brightness(1.1)}
-.controls{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
-.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#1f2542;color:var(--accent);font-size:12px;margin-left:6px}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#1f2542;color:var(--accent);font-size:12px}
+.topbar{display:flex;gap:6px;align-items:center;justify-content:space-between}
+.iconbtn{background:#1f2542;border:1px solid #364075;border-radius:8px;padding:6px 10px;font-size:14px}
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.shop-item{background:#0f142a;border:1px solid #2a335a;border-radius:10px;padding:10px}
+ul{text-align:left;line-height:1.5}
 </style>
 </head>
 <body>
 <header>
-<h1>Dodge Blocks Pro <span class="badge" id="phaseBadge">Fase 1</span></h1>
+<div class="topbar">
+<h1>Dodge Blocks <span class="badge" id="phaseBadge">Fase 1</span></h1>
+<div>
+<button class="iconbtn" id="pauseBtn">⏸️</button>
+<button class="iconbtn" id="shopBtn">🛒</button>
+</div>
+</div>
 <div class="hud">
 <span>Pontos: <strong id="score">0</strong></span>
 <span>Recorde: <strong id="best">0</strong></span>
-<span>Vidas: <strong id="lives">3</strong></span>
-<span>Power: <strong id="power">-</strong></span>
+<span>Vidas: <strong id="lives">5</strong></span>
+<span>Moedas: <strong id="coins">0</strong></span>
 </div>
 </header>
 <main>
-<canvas id="game" width="360" height="600" aria-label="Área do jogo"></canvas>
-<div class="overlay" id="menu">
-<h2>Dodge Blocks Pro</h2>
-<p>← → ou toque para mover. Espaço = Dash. Pegue power-ups!</p>
-<div class="controls">
-<button id="startBtn">Jogar</button>
-<button id="howBtn">Como jogar</button>
-</div>
-</div>
-<div class="overlay hidden" id="how">
+<canvas id="game" width="360" height="600"></canvas>
+
+<div class="overlay" id="tutorial">
 <h2>Como Jogar</h2>
-<p style="text-align:left;line-height:1.5">
-• Desvie dos blocos<br>
-• Pegue escudo 🛡️, slow ⏱️ e moedas 🪙<br>
-• Dash com Espaço ou toque duplo<br>
-• 3 vidas. Fases aumentam dificuldade
-</p>
-<button id="backBtn">Voltar</button>
+<ul>
+<li>Mova ← → ou toque para desviar</li>
+<li>Pegue ⭐ moedas, 🛡️ escudo e ❤️ vida</li>
+<li>A cada 500 pontos você ganha +1 vida</li>
+<li>Pause ⏸️ e abra a loja 🛒 quando quiser</li>
+<li>Complete a fase para ganhar +1 vida extra</li>
+</ul>
+<button id="startBtn">Começar</button>
 </div>
+
+<div class="overlay hidden" id="pauseMenu">
+<h2>Pausado</h2>
+<button id="resumeBtn">Continuar</button>
+<button id="shopFromPause">Loja</button>
+<button id="restartBtn">Recomeçar</button>
+</div>
+
+<div class="overlay hidden" id="phaseComplete">
+<h2>Fase Concluída!</h2>
+<p>Pontuação: <strong id="phaseScore">0</strong></p>
+<p>Bônus: +1 vida e <span id="phaseCoins">0</span> moedas</p>
+<button id="nextPhaseBtn">Próxima Fase</button>
+</div>
+
 <div class="overlay hidden" id="gameover">
 <h2>Game Over</h2>
 <p>Sua pontuação: <strong id="finalScore">0</strong></p>
-<button id="restartBtn">Recomeçar</button>
+<p>Moedas ganhas: <strong id="coinsEarned">0</strong></p>
+<button id="retryBtn">Tentar Novamente</button>
 </div>
+
+<div class="overlay hidden" id="shop">
+<h2>Loja</h2>
+<div class="shop-grid" id="shopGrid"></div>
+<button id="closeShop">Fechar</button>
+</div>
+
 </main>
-<footer><small>Feito com HTML, CSS e JS — PWA offline.</small></footer>
 <script>
 (() => {
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
-const bestEl = document.getElementById('best');
-const livesEl = document.getElementById('lives');
-const powerEl = document.getElementById('power');
-const phaseBadge = document.getElementById('phaseBadge');
-const menu = document.getElementById('menu');
-const how = document.getElementById('how');
-const gameover = document.getElementById('gameover');
-const finalScoreEl = document.getElementById('finalScore');
-document.getElementById('startBtn').onclick = start;
-document.getElementById('restartBtn').onclick = start;
-document.getElementById('howBtn').onclick = ()=>{menu.classList.add('hidden');how.classList.remove('hidden');};
-document.getElementById('backBtn').onclick = ()=>{how.classList.add('hidden');menu.classList.remove('hidden');};
+const canvas=document.getElementById('game'), ctx=canvas.getContext('2d');
+const scoreEl=document.getElementById('score'), bestEl=document.getElementById('best'), livesEl=document.getElementById('lives'), coinsEl=document.getElementById('coins'), phaseBadge=document.getElementById('phaseBadge');
+const tutorial=document.getElementById('tutorial'), pauseMenu=document.getElementById('pauseMenu'), phaseComplete=document.getElementById('phaseComplete'), gameover=document.getElementById('gameover'), shop=document.getElementById('shop');
+const phaseScoreEl=document.getElementById('phaseScore'), phaseCoinsEl=document.getElementById('phaseCoins'), finalScoreEl=document.getElementById('finalScore'), coinsEarnedEl=document.getElementById('coinsEarned');
 
-function setupCanvas(){
-  const cssW = canvas.clientWidth;
-  const cssH = Math.round(cssW*600/360);
-  canvas.style.height = cssH+'px';
-  const dpr = Math.min(window.devicePixelRatio||1,2);
-  canvas.width = Math.round(cssW*dpr);
-  canvas.height = Math.round(cssH*dpr);
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-}
-setupCanvas();
-addEventListener('resize',setupCanvas);
+document.getElementById('startBtn').onclick=start;
+document.getElementById('pauseBtn').onclick=pause;
+document.getElementById('resumeBtn').onclick=resume;
+document.getElementById('restartBtn').onclick=()=>{pauseMenu.classList.add('hidden');start();};
+document.getElementById('retryBtn').onclick=()=>{gameover.classList.add('hidden');start();};
+document.getElementById('shopBtn').onclick=openShop;
+document.getElementById('shopFromPause').onclick=()=>{pauseMenu.classList.add('hidden');openShop();};
+document.getElementById('closeShop').onclick=()=>{shop.classList.add('hidden');if(!state.running && !pauseMenu.classList.contains('hidden')){} else if(state.running){} else {tutorial.classList.remove('hidden');}};
+document.getElementById('nextPhaseBtn').onclick=nextPhase;
 
-const state = {
-  running:false,
-  score:0,
-  best:+localStorage.getItem('db_best')||0,
-  lives:3,
-  player:{x:160,y:520,w:40,h:40,speed:5,targetX:160},
-  obstacles:[],
-  powerups:[],
-  t:0,
-  phase:1,
-  speed:2,
-  spawnEvery:48,
-  dashCD:0,
-  shield:0,
-  slow:0,
-  invuln:0
-};
-bestEl.textContent = state.best;
+function setup(){const w=canvas.clientWidth,h=Math.round(w*600/360);canvas.style.height=h+'px';const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
+setup();addEventListener('resize',setup);
 
-const keys={left:false,right:false};
-addEventListener('keydown',e=>{
-  if(e.key==='ArrowLeft'||e.key==='a')keys.left=true;
-  if(e.key==='ArrowRight'||e.key==='d')keys.right=true;
-  if(e.code==='Space')dash();
-});
-addEventListener('keyup',e=>{
-  if(e.key==='ArrowLeft'||e.key==='a')keys.left=false;
-  if(e.key==='ArrowRight'||e.key==='d')keys.right=false;
-});
+const save={coins:+localStorage.getItem('db_coins')||0, skin:localStorage.getItem('db_skin')||'cyan'};
+coinsEl.textContent=save.coins;
 
-let lastTap=0;
-canvas.addEventListener('pointerdown',e=>{
-  const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left;
-  const now=performance.now();
-  if(now-lastTap<300)dash(); lastTap=now;
-  state.player.targetX = x-state.player.w/2;
-});
-canvas.addEventListener('pointermove',e=>{
-  if(e.pressure===0)return;
-  const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left;
-  state.player.targetX = x-state.player.w/2;
-});
+const state={running:false,score:0,best:+localStorage.getItem('db_best')||0,lives:5,phase:1,phaseTarget:1000,player:{x:160,y:520,w:48,h:48,targetX:160,trail:[]},obstacles:[],powerups:[],particles:[],t:0,speed:1.8,spawnEvery:70,shield:0,invuln:0,coinsEarned:0,lastLifeScore:0};
+bestEl.textContent=state.best;
 
-function dash(){
-  if(state.dashCD>0||!state.running)return;
-  state.player.targetX += (state.player.targetX>state.player.x?1:-1)*80;
-  state.dashCD=60;
-  state.invuln=20;
-}
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='a')state.player.targetX-=35;if(e.key==='ArrowRight'||e.key==='d')state.player.targetX+=35;if(e.key==='Escape')pause();});
+canvas.addEventListener('pointerdown',e=>{const r=canvas.getBoundingClientRect();state.player.targetX=e.clientX-r.left-state.player.w/2;});
+canvas.addEventListener('pointermove',e=>{if(e.pressure===0)return;const r=canvas.getBoundingClientRect();state.player.targetX=e.clientX-r.left-state.player.w/2;});
 
 function start(){
-  Object.assign(state,{
-    running:true,score:0,lives:3,obstacles:[],powerups:[],t:0,phase:1,speed:2,spawnEvery:48,dashCD:0,shield:0,slow:0,invuln:0,
-    player:{x:160,y:520,w:40,h:40,speed:5,targetX:160}
-  });
-  menu.classList.add('hidden');
-  how.classList.add('hidden');
-  gameover.classList.add('hidden');
-  update();
+ Object.assign(state,{running:true,score:0,lives:5,phase:1,phaseTarget:1000,obstacles:[],powerups:[],particles:[],t:0,speed:1.8,spawnEvery:70,shield:300,invuln:0,coinsEarned:0,lastLifeScore:0,player:{x:160,y:520,w:48,h:48,targetX:160,trail:[]}});
+ tutorial.classList.add('hidden'); pauseMenu.classList.add('hidden'); phaseComplete.classList.add('hidden'); gameover.classList.add('hidden'); shop.classList.add('hidden');
+ phaseBadge.textContent='Fase 1';
+ update();
 }
+function pause(){if(!state.running)return; state.running=false; pauseMenu.classList.remove('hidden');}
+function resume(){pauseMenu.classList.add('hidden'); state.running=true; update();}
+function openShop(){shop.classList.remove('hidden'); renderShop();}
 
 function rand(a,b){return Math.random()*(b-a)+a}
 function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 
 function spawn(){
-  const w=canvas.clientWidth;
-  // obstacles
-  const count = state.phase===1?2:state.phase===2?3:4;
-  for(let i=0;i<count;i++){
-    const laneW = rand(50,70);
-    state.obstacles.push({
-      x:rand(0,w-laneW), y:-60, w:laneW, h:rand(20,50),
-      vy:state.speed* (state.slow>0?0.5:1) + rand(0,0.8),
-      type: Math.random()<0.2?'mover':'block',
-      vx: rand(-1,1)
-    });
-  }
-  // powerup chance
-  if(Math.random()<0.25){
-    const types=['shield','slow','coin'];
-    const type=types[Math.floor(Math.random()*types.length)];
-    state.powerups.push({x:rand(20,w-20),y:-30,w:24,h:24,vy:2,type});
-  }
+ const w=canvas.clientWidth;
+ const safeX=rand(60,w-120), safeW=130;
+ const count=1;
+ for(let i=0;i<count;i++){
+  let x; do{x=rand(0,w-60);}while(x>safeX-safeW && x<safeX+safeW);
+  state.obstacles.push({x,y:-60,w:rand(50,70),h:rand(30,50),vy:state.speed+rand(0,0.3)});
+ }
+ // powerups: coin, shield, life
+ const r=Math.random();
+ if(r<0.45) state.powerups.push({x:rand(30,w-30),y:-30,r:16,vy:1.7,type:'coin'});
+ else if(r<0.55) state.powerups.push({x:rand(30,w-30),y:-30,r:16,vy:1.7,type:'shield'});
+ else if(r<0.62) state.powerups.push({x:rand(30,w-30),y:-30,r:16,vy:1.7,type:'life'});
 }
+
+function addParticles(x,y,n,c){for(let i=0;i<n;i++)state.particles.push({x,y,vx:rand(-2,2),vy:rand(-3,-0.5),life:28,color:c});}
 
 function update(){
-  if(!state.running)return;
-  state.t++;
-  if(state.dashCD>0)state.dashCD--;
-  if(state.shield>0)state.shield--;
-  if(state.slow>0)state.slow--;
-  if(state.invuln>0)state.invuln--;
+ if(!state.running) return;
+ state.t++;
+ if(state.shield>0)state.shield--;
+ if(state.invuln>0)state.invuln--;
 
-  // phase progression
-  if(state.score>500 && state.phase===1){state.phase=2;state.speed=3;state.spawnEvery=40;phaseBadge.textContent='Fase 2'}
-  if(state.score>1200 && state.phase===2){state.phase=3;state.speed=4;state.spawnEvery=32;phaseBadge.textContent='Fase 3'}
+ if(state.t%state.spawnEvery===0) spawn();
 
-  if(state.t % state.spawnEvery===0) spawn();
+ state.player.x+=(state.player.targetX-state.player.x)*0.22;
+ state.player.x=Math.max(0,Math.min(canvas.clientWidth-state.player.w,state.player.x));
+ state.player.trail.push({x:state.player.x,y:state.player.y,life:10});
+ if(state.player.trail.length>10)state.player.trail.shift();
 
-  // player move
-  if(keys.left) state.player.targetX -= 10;
-  if(keys.right) state.player.targetX += 10;
-  state.player.x += (state.player.targetX - state.player.x)*0.25;
-  state.player.x = Math.max(0,Math.min(canvas.clientWidth-state.player.w,state.player.x));
+ state.obstacles.forEach(o=>o.y+=o.vy);
+ state.obstacles=state.obstacles.filter(o=>o.y<canvas.clientHeight+70);
+ state.powerups.forEach(p=>p.y+=p.vy);
+ state.powerups=state.powerups.filter(p=>p.y<canvas.clientHeight+30);
+ state.particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.life--;});
+ state.particles=state.particles.filter(p=>p.life>0);
 
-  // update obstacles
-  state.obstacles.forEach(o=>{
-    o.y += o.vy;
-    if(o.type==='mover') o.x += Math.sin(state.t*0.05+i)*o.vx;
-  });
-  state.obstacles = state.obstacles.filter(o=>o.y<canvas.clientHeight+60);
-
-  // update powerups
-  state.powerups.forEach(p=>p.y+=p.vy);
-  state.powerups = state.powerups.filter(p=>p.y<canvas.clientHeight+30);
-
-  // collisions
-  const pRect={x:state.player.x,y:state.player.y,w:state.player.w,h:state.player.h};
-  for(const o of state.obstacles){
-    if(overlap(pRect,o) && state.invuln===0){
-      if(state.shield>0){state.shield=0;state.invuln=60;state.obstacles=state.obstacles.filter(x=>x!==o);break;}
-      state.lives--;
-      state.invuln=90;
-      if(state.lives<=0){gameOver();return;}
-    }
+ const pRect={x:state.player.x,y:state.player.y,w:state.player.w,h:state.player.h};
+ for(const o of [...state.obstacles]){
+  if(overlap(pRect,o)&&state.invuln===0){
+   if(state.shield>0){state.shield=0;state.invuln=60;state.obstacles=state.obstacles.filter(x=>x!==o);addParticles(o.x+o.w/2,o.y+o.h/2,14,'#6ee7ff');break;}
+   state.lives--;state.invuln=90;addParticles(state.player.x+24,state.player.y+24,18,'#ff5577');
+   if(state.lives<=0){gameOver();return;}
   }
-  for(const pu of [...state.powerups]){
-    if(overlap(pRect,pu)){
-      if(pu.type==='shield')state.shield=600;
-      if(pu.type==='slow')state.slow=300;
-      if(pu.type==='coin')state.score+=100;
-      state.powerups=state.powerups.filter(x=>x!==pu);
-    }
+ }
+ for(const pu of [...state.powerups]){
+  if(Math.hypot(pu.x-(state.player.x+24),pu.y-(state.player.y+24))<36){
+   if(pu.type==='shield')state.shield=600;
+   if(pu.type==='coin')state.coinsEarned+=3;
+   if(pu.type==='life')state.lives++;
+   state.powerups=state.powerups.filter(x=>x!==pu);
+   addParticles(pu.x,pu.y,14,'#ffd700');
   }
+ }
 
-  state.score++;
-  scoreEl.textContent=state.score;
-  livesEl.textContent=state.lives;
-  powerEl.textContent = state.shield>0?'Escudo':state.slow>0?'Slow':'-';
+ state.score++;
+ // vida por pontuação
+ if(state.score - state.lastLifeScore >= 500){state.lives++; state.lastLifeScore = state.score; addParticles(state.player.x+24,state.player.y+24,20,'#ff6ee7');}
 
-  draw();
-  requestAnimationFrame(update);
+ // fase completa
+ if(state.score >= state.phaseTarget){
+  state.running=false;
+  phaseScoreEl.textContent=state.score;
+  const bonus = 10*state.phase;
+  state.coinsEarned+=bonus;
+  phaseCoinsEl.textContent=bonus;
+  phaseComplete.classList.remove('hidden');
+  return;
+ }
+
+ scoreEl.textContent=state.score;
+ livesEl.textContent=state.lives;
+ coinsEl.textContent=save.coins+state.coinsEarned;
+ draw();
+ requestAnimationFrame(update);
 }
 
+function nextPhase(){
+ state.phase++;
+ state.lives++; // +1 vida por fase
+ state.phaseTarget += 800;
+ state.speed += 0.2;
+ phaseBadge.textContent='Fase '+state.phase;
+ phaseComplete.classList.add('hidden');
+ state.running=true;
+ update();
+}
+
+function drawBg(){
+ const w=canvas.clientWidth,h=canvas.clientHeight;
+ const g=ctx.createLinearGradient(0,0,0,h);g.addColorStop(0,'#1a0f2e');g.addColorStop(1,'#02040a');ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+ ctx.fillStyle='rgba(255,255,255,.12)';
+ for(let i=0;i<30;i++){const x=(i*97+state.t*0.15)%w, y=(i*53+state.t*0.2)%h; ctx.fillRect(x,y,2,2);}
+}
+
+function skinColor(){return save.skin==='cyan'?'#6ee7ff':save.skin==='pink'?'#ff6ee7':'#ffd700';}
+
 function draw(){
-  const w=canvas.clientWidth,h=canvas.clientHeight;
-  ctx.clearRect(0,0,w,h);
-  // stars
-  ctx.globalAlpha=0.15;
-  for(let i=0;i<30;i++){
-    const x=(i*97+state.t*0.3)%w;
-    const y=(i*53+state.t*0.2)%h;
-    ctx.fillStyle='#fff';
-    ctx.fillRect(x,y,2,2);
-  }
-  ctx.globalAlpha=1;
-  // obstacles
-  state.obstacles.forEach(o=>{
-    const g=ctx.createLinearGradient(o.x,o.y,o.x,o.y+o.h);
-    g.addColorStop(0,'rgba(110,231,255,.9)');
-    g.addColorStop(1,'rgba(60,120,200,.9)');
-    ctx.fillStyle=g;
-    ctx.fillRect(o.x,o.y,o.w,o.h);
-  });
-  // powerups
-  state.powerups.forEach(p=>{
-    ctx.fillStyle = p.type==='shield'?'#6ee7ff':p.type==='slow'?'#ffdd55':'#ffd700';
-    ctx.beginPath();
-    ctx.arc(p.x+12,p.y+12,12,0,Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle='#000';
-    ctx.font='14px system-ui';
-    ctx.textAlign='center';
-    ctx.fillText(p.type==='shield'?'🛡':p.type==='slow'?'⏱':'$',p.x+12,p.y+17);
-  });
-  // player
-  ctx.save();
-  if(state.invuln>0 && Math.floor(state.t/5)%2===0)ctx.globalAlpha=0.4;
-  ctx.fillStyle='#6ee7ff';
-  ctx.shadowColor='#6ee7ff88';
-  ctx.shadowBlur=12;
-  ctx.fillRect(state.player.x,state.player.y,state.player.w,state.player.h);
-  ctx.restore();
-  // shield ring
-  if(state.shield>0){
-    ctx.strokeStyle='#6ee7ff';
-    ctx.lineWidth=3;
-    ctx.beginPath();
-    ctx.arc(state.player.x+20,state.player.y+20,30,0,Math.PI*2);
-    ctx.stroke();
-  }
+ drawBg();
+ state.obstacles.forEach(o=>{ctx.fillStyle='#6ee7ff';ctx.shadowColor='#6ee7ff55';ctx.shadowBlur=10;ctx.fillRect(o.x,o.y,o.w,o.h);ctx.shadowBlur=0;});
+ state.powerups.forEach(p=>{
+  ctx.beginPath();ctx.fillStyle=p.type==='shield'?'#6ee7ff':p.type==='life'?'#ff6e9a':'#ffd700';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=12;ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle='#000';ctx.font='14px system-ui';ctx.textAlign='center';ctx.fillText(p.type==='shield'?'🛡':p.type==='life'?'❤️':'⭐',p.x,p.y+5);
+ });
+ state.particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/28);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,3,3);});ctx.globalAlpha=1;
+ state.player.trail.forEach(t=>{ctx.globalAlpha=t.life/10*0.3;ctx.fillStyle=skinColor();ctx.fillRect(t.x+10,t.y+10,28,28);});ctx.globalAlpha=1;
+ ctx.fillStyle=skinColor();ctx.shadowColor=skinColor()+'aa';ctx.shadowBlur=16;ctx.fillRect(state.player.x,state.player.y,state.player.w,state.player.h);ctx.shadowBlur=0;
+ if(state.shield>0){ctx.strokeStyle=skinColor();ctx.lineWidth=3;ctx.beginPath();ctx.arc(state.player.x+24,state.player.y+24,38,0,Math.PI*2);ctx.stroke();}
 }
 
 function gameOver(){
-  state.running=false;
-  finalScoreEl.textContent=state.score;
-  if(state.score>state.best){state.best=state.score;localStorage.setItem('db_best',state.best);bestEl.textContent=state.best;}
-  gameover.classList.remove('hidden');
+ state.running=false;
+ save.coins+=state.coinsEarned;localStorage.setItem('db_coins',save.coins);
+ finalScoreEl.textContent=state.score;
+ coinsEarnedEl.textContent=state.coinsEarned;
+ if(state.score>state.best){state.best=state.score;localStorage.setItem('db_best',state.best);bestEl.textContent=state.best;}
+ gameover.classList.remove('hidden');
+ coinsEl.textContent=save.coins;
 }
+
+const items=[
+ {id:'skin_cyan',name:'Ciano',type:'skin',value:'cyan',price:0},
+ {id:'skin_pink',name:'Rosa',type:'skin',value:'pink',price:30},
+ {id:'skin_gold',name:'Ouro',type:'skin',value:'gold',price:80},
+];
+function renderShop(){
+ const grid=document.getElementById('shopGrid'); grid.innerHTML='';
+ items.forEach(it=>{
+  const owned=save.skin===it.value||it.price===0;
+  const div=document.createElement('div');div.className='shop-item';
+  div.innerHTML=`<h4>${it.name}</h4><button>${owned?'Usar':it.price+' moedas'}</button>`;
+  div.querySelector('button').onclick=()=>{
+   if(!owned && save.coins>=it.price){save.coins-=it.price;localStorage.setItem('db_coins',save.coins);}
+   save.skin=it.value;localStorage.setItem('db_skin',it.value);coinsEl.textContent=save.coins;renderShop();
+  };
+  grid.appendChild(div);
+ });
+}
+renderShop();
 })();
 </script>
 </body>
